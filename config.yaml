@@ -1,0 +1,9 @@
+# AI Memory Platform 配置
+
+mysql:
+  host: "127.0.0.1"
+  port: 3306
+  database: "memory_platform"
+  username: "root"
+  password: ""
+  pool_size: 5
