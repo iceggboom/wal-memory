@@ -12,6 +12,7 @@ from mem0.configs.llms.lmstudio import LMStudioConfig
 from mem0.configs.llms.ollama import OllamaConfig
 from mem0.configs.llms.openai import OpenAIConfig
 from mem0.configs.llms.vllm import VllmConfig
+from mem0.configs.llms.wal import WalConfig
 from mem0.configs.rerankers.base import BaseRerankerConfig
 from mem0.configs.rerankers.cohere import CohereRerankerConfig
 from mem0.configs.rerankers.sentence_transformer import SentenceTransformerRerankerConfig
@@ -53,6 +54,7 @@ class LlmFactory:
         "lmstudio": ("mem0.llms.lmstudio.LMStudioLLM", LMStudioConfig),
         "vllm": ("mem0.llms.vllm.VllmLLM", VllmConfig),
         "langchain": ("mem0.llms.langchain.LangchainLLM", BaseLlmConfig),
+        "wal": ("mem0.llms.wal.WalLLM", WalConfig),
     }
 
     @classmethod
