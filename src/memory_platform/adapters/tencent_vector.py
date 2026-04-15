@@ -287,7 +287,7 @@ class TencentVectorStore(VectorStoreBase):
 
         from tcvectordb.model.collection import Embedding
         from tcvectordb.model.enum import FieldType, IndexType
-        from tcvectordb.model.index import FilterIndex, VectorIndex, HNSWParams
+        from tcvectordb.model.index import FilterIndex, Index, VectorIndex, HNSWParams
 
         metric_type = {"cosine": "COSINE", "l2": "L2", "ip": "IP"}.get(
             distance, "COSINE"
