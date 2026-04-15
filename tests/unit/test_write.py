@@ -105,15 +105,14 @@ class TestWriteServiceWithLLM:
 
     def test_add_memory_uses_llm_classification(self):
         """add_memory 使用 LLM 分类层级"""
+        from mem0.llms.base import LLMBase
         mock_memory = MagicMock()
         mock_memory.add.return_value = {"results": [{"event": "ADD"}]}
 
-        mock_llm_client = MagicMock()
-        mock_llm_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L2", "reason": "描述偏好"}')]
-        )
+        mock_llm = MagicMock(spec=LLMBase)
+        mock_llm.generate_response.return_value = '{"layer": "L2", "reason": "描述偏好"}'
 
-        svc = WriteService(mem0=mock_memory, llm_client=mock_llm_client)
+        svc = WriteService(mem0=mock_memory, llm=mock_llm)
 
         # 添加一个关键词无法明确分类的记忆
         svc.add_memory(
@@ -123,16 +122,17 @@ class TestWriteServiceWithLLM:
         )
 
         # 验证调用了 LLM
-        mock_llm_client.messages.create.assert_called()
+        mock_llm.generate_response.assert_called()
 
     def test_add_memory_keyword_takes_priority(self):
         """关键词匹配优先，不调用 LLM"""
+        from mem0.llms.base import LLMBase
         mock_memory = MagicMock()
         mock_memory.add.return_value = {"results": [{"event": "ADD"}]}
 
-        mock_llm_client = MagicMock()
+        mock_llm = MagicMock(spec=LLMBase)
 
-        svc = WriteService(mem0=mock_memory, llm_client=mock_llm_client)
+        svc = WriteService(mem0=mock_memory, llm=mock_llm)
 
         # 添加一个关键词能明确分类的记忆
         svc.add_memory(
@@ -142,10 +142,11 @@ class TestWriteServiceWithLLM:
         )
 
         # 关键词匹配成功，不应调用 LLM
-        mock_llm_client.messages.create.assert_not_called()
+        mock_llm.generate_response.assert_not_called()
 
     def test_extract_uses_llm_classification(self):
         """extract 使用 LLM 分类层级"""
+        from mem0.llms.base import LLMBase
         mock_memory = MagicMock()
         mock_memory.add.return_value = {
             "results": [
@@ -160,12 +161,10 @@ class TestWriteServiceWithLLM:
             ]
         }
 
-        mock_llm_client = MagicMock()
-        mock_llm_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L2", "reason": "描述偏好风格"}')]
-        )
+        mock_llm = MagicMock(spec=LLMBase)
+        mock_llm.generate_response.return_value = '{"layer": "L2", "reason": "描述偏好风格"}'
 
-        svc = WriteService(mem0=mock_memory, llm_client=mock_llm_client)
+        svc = WriteService(mem0=mock_memory, llm=mock_llm)
 
         result = svc.extract(
             user_id="u1",

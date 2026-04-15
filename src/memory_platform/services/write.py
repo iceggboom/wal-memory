@@ -38,7 +38,7 @@ from mem0 import Memory
 from memory_platform.ext.layer import classify_layer, classify_layer_with_llm
 
 if TYPE_CHECKING:
-    from anthropic import Anthropic
+    from mem0.llms.base import LLMBase
 
 
 @dataclass
@@ -67,19 +67,16 @@ class WriteService:
     def __init__(
         self,
         mem0: Memory,
-        llm_client: "Anthropic | None" = None,
-        llm_model: str = "glm-5-turbo",
+        llm: "LLMBase | None" = None,
     ):
         """初始化服务
 
         Args:
             mem0: mem0 Memory 实例
-            llm_client: 可选的 LLM 客户端，用于层级分类
-            llm_model: LLM 模型名称
+            llm: 可选的 mem0 LLM 实例，用于层级分类
         """
         self.mem0 = mem0
-        self.llm_client = llm_client
-        self.llm_model = llm_model
+        self.llm = llm
 
     def _classify_layer(
         self,
@@ -91,7 +88,7 @@ class WriteService:
         策略：
         1. 显式指定优先
         2. 关键词匹配
-        3. LLM 辅助（如果配置了 llm_client）
+        3. LLM 辅助（如果配置了 llm）
 
         Args:
             text: 记忆文本
@@ -100,17 +97,14 @@ class WriteService:
         Returns:
             MemoryLayer 枚举值
         """
-        if self.llm_client is not None:
-            # 使用 LLM 辅助分类（内部已实现关键词优先）
+        if self.llm is not None:
             return classify_layer_with_llm(
                 text=text,
-                llm_client=self.llm_client,
-                model=self.llm_model,
+                llm=self.llm,
                 use_keyword_first=True,
                 explicit_layer=explicit_layer,
             )
         else:
-            # 仅使用关键词分类
             return classify_layer(text, explicit_layer=explicit_layer)
 
     def add_memory(
