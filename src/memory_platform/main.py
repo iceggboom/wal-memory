@@ -23,7 +23,10 @@ API 端点：
 """
 import logging
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from mem0 import Memory
 
 from memory_platform.config import build_mem0_config, get_settings
@@ -76,17 +79,25 @@ def create_app(mem0: Memory | None = None) -> FastAPI:
 
         mem0 = Memory(config=config)
 
-    # LLM 客户端（用于层级分类）
-    llm_client = None
-    if settings.llm_provider == "anthropic" and settings.llm_api_key:
-        from anthropic import Anthropic
-        llm_client = Anthropic(api_key=settings.llm_api_key, base_url=settings.llm_base_url)
+    # LLM 实例（用于层级分类，通过工厂统一创建）
+    llm_instance = None
+    if settings.llm_provider == "wal":
+        from mem0.utils.factory import LlmFactory
+        llm_instance = LlmFactory.create(
+            "wal",
+            config={
+                "model": settings.llm_model,
+                "wal_base_url": settings.wal_base_url,
+                "aloha_app_name": settings.aloha_app_name,
+                "access_token": settings.access_token,
+            },
+        )
 
     cross_collection_searcher = None
 
     app.include_router(create_memories_router(
         mem0=mem0,
-        llm_client=llm_client,
+        llm=llm_instance,
         cross_collection_searcher=cross_collection_searcher,
         app_registry=app_registry,
     ))
@@ -95,6 +106,11 @@ def create_app(mem0: Memory | None = None) -> FastAPI:
     @app.get("/health")
     def health():
         return {"status": "ok", "mysql": "enabled" if settings.mysql_enabled else "disabled"}
+
+    # 挂载静态文件（前端页面）
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.is_dir():
+        app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
     return app
 
