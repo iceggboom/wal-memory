@@ -1,5 +1,40 @@
 # AI Memory Platform 配置
+# 所有配置集中在此文件，无需设置环境变量
 
+# API 认证
+api_keys:
+  test-app: "test-key-123"
+
+# LLM 配置（Walmart 内部 LLM 网关）
+llm:
+  provider: "wal"
+  model: "DeepSeekV3.2"
+  wal_base_url: "https://llm-gateway.example.com/api"
+  aloha_app_name: "ai-memory-platform"
+  access_token: "your-access-token"
+
+# 向量存储配置
+vector_store:
+  provider: "tencent_vector"
+  config:
+    url: "http://10.4.21.101:80"
+    username: "root"
+    key: "123"
+    collection_name: "memory"
+    embedding_model_dims: 768
+    database_name: "ai_platform"
+    timeout: 30
+    embedding_model: "bge-base-zh"
+    mock: false
+
+# Embedder 配置（mem0占位配置）
+embedder:
+  provider: "mock"
+  model: "mock-embedding"
+  api_key: ""
+  base_url: ""
+
+# MySQL 配置
 mysql:
   host: "127.0.0.1"
   port: 3306
@@ -7,3 +42,6 @@ mysql:
   username: "root"
   password: ""
   pool_size: 5
+
+# 降级开关
+degradation_enabled: true
