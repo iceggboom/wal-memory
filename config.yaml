@@ -8,10 +8,10 @@ api_keys:
 # LLM 配置（Walmart 内部 LLM 网关）
 llm:
   provider: "wal"
-  model: "DeepSeekV3.2"
-  wal_base_url: "https://llm-gateway.example.com/api"
-  aloha_app_name: "ai-memory-platform"
-  access_token: "your-access-token"
+  model: "DeepSeekV3.1"
+  wal_base_url: "https://mdc-qa-aloha-gateway.cn.wal-mart.com/genai-platform/advancedApi/openAI"
+  aloha_app_name: "reimbursement-service"
+  access_token: "292D6AB5901113D8B3CEB3FA915AFA7A"
 
 # 向量存储配置
 vector_store:
@@ -19,7 +19,7 @@ vector_store:
   config:
     url: "http://10.4.21.101:80"
     username: "root"
-    key: "123"
+    key: "f1IYm0b0ivALeYU31Dz3efUuzRSieY4OJDs9asfx"
     collection_name: "memory"
     embedding_model_dims: 768
     database_name: "ai_platform"

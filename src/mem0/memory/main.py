@@ -1222,6 +1222,7 @@ class Memory(MemoryBase):
             updated_at=new_metadata.get("updated_at"),
             actor_id=new_metadata.get("actor_id"),
             role=new_metadata.get("role"),
+            user_id=new_metadata.get("user_id"),
         )
         return memory_id
 
@@ -1321,6 +1322,7 @@ class Memory(MemoryBase):
             updated_at=new_metadata["updated_at"],
             actor_id=new_metadata.get("actor_id"),
             role=new_metadata.get("role"),
+            user_id=new_metadata.get("user_id"),
         )
         return memory_id
 
@@ -1347,6 +1349,7 @@ class Memory(MemoryBase):
             actor_id=existing_memory.payload.get("actor_id"),
             role=existing_memory.payload.get("role"),
             is_deleted=1,
+            user_id=existing_memory.payload.get("user_id"),
         )
         return memory_id
 
@@ -2371,6 +2374,7 @@ class AsyncMemory(MemoryBase):
             updated_at=new_metadata.get("updated_at"),
             actor_id=new_metadata.get("actor_id"),
             role=new_metadata.get("role"),
+            user_id=new_metadata.get("user_id"),
         )
 
         return memory_id
@@ -2488,6 +2492,7 @@ class AsyncMemory(MemoryBase):
             updated_at=new_metadata["updated_at"],
             actor_id=new_metadata.get("actor_id"),
             role=new_metadata.get("role"),
+            user_id=new_metadata.get("user_id"),
         )
         return memory_id
 
@@ -2515,6 +2520,7 @@ class AsyncMemory(MemoryBase):
             actor_id=existing_memory.payload.get("actor_id"),
             role=existing_memory.payload.get("role"),
             is_deleted=1,
+            user_id=existing_memory.payload.get("user_id"),
         )
 
         return memory_id

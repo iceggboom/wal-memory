@@ -16,9 +16,13 @@
 """
 
 import logging
+import urllib3
 from typing import Dict, List, Optional, Union
 
 import httpx
+
+# 禁用 SSL 警告（内网自签名证书）
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from mem0.configs.llms.base import BaseLlmConfig
 from mem0.configs.llms.wal import WalConfig
@@ -76,7 +80,6 @@ class WalLLM(LLMBase):
             "accessToken": self.config.access_token or "",
             "model": self.config.model,
             "supplierType": self.config.supplier_type,
-            "Content-Type": "application/json",
         }
 
     def _build_request_body(self, messages: List[Dict[str, str]], **kwargs) -> Dict:
@@ -121,15 +124,24 @@ class WalLLM(LLMBase):
         headers = self._build_headers()
         body = self._build_request_body(messages, **kwargs)
 
+        import json as _json
+        logger.info("Wal LLM 请求 URL: %s", url)
+        logger.info("Wal LLM 请求 headers: %s", headers)
+        logger.info("Wal LLM 请求 body: %s", _json.dumps(body, ensure_ascii=False))
+
         try:
-            with httpx.Client() as client:
+            with httpx.Client(verify=False) as client:
                 response = client.post(url, json=body, headers=headers, timeout=60.0)
+
+            logger.info("Wal LLM 响应状态码: %d", response.status_code)
+            logger.info("Wal LLM 响应头: %s", dict(response.headers))
+            logger.info("Wal LLM 响应内容: %s", response.text[:500])
 
             if response.status_code != 200:
                 logger.warning(
                     "Wal LLM 返回非 200 状态码: %d, 响应: %s",
                     response.status_code,
-                    response.text[:200],
+                    response.text[:500],
                 )
                 return ""
 

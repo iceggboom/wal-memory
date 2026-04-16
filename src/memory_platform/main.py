@@ -63,7 +63,6 @@ def create_app(mem0: Memory | None = None) -> FastAPI:
             )
             app_registry = AppRegistry(db=db_pool)
         except Exception as e:
-            import logging
             logging.getLogger(__name__).warning("MySQL connection failed, running without DB: %s", e)
             db_pool = None
             app_registry = None
@@ -77,7 +76,16 @@ def create_app(mem0: Memory | None = None) -> FastAPI:
             from memory_platform.db.mysql_manager import MySQLManager
             config._storage_manager = MySQLManager(db=db_pool)
 
-        mem0 = Memory(config=config)
+        try:
+            logging.getLogger(__name__).info(
+                "初始化 mem0: llm_provider=%s, vector_store=%s",
+                config.llm.provider, config.vector_store.provider,
+            )
+            mem0 = Memory(config=config)
+            logging.getLogger(__name__).info("mem0 初始化成功")
+        except Exception as e:
+            logging.getLogger(__name__).error("mem0 初始化失败: %s", e, exc_info=True)
+            raise
 
     # LLM 实例（用于层级分类，通过工厂统一创建）
     llm_instance = None

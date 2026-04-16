@@ -142,4 +142,24 @@ def create_router(mem0: Memory, app_registry: Any = None) -> APIRouter:
         _auth(request)
         return admin_svc.stats()
 
+    # ========================================================================
+    # POST /v1/admin/reset-collection — 重置向量 Collection
+    # ========================================================================
+    @router.post("/reset-collection")
+    def reset_collection(request: Request):
+        """删除并重建当前向量 Collection
+
+        警告：此操作会清空所有记忆数据，不可逆！
+
+        Returns:
+            {"message": "Collection reset successfully"}
+        """
+        _auth(request)
+        try:
+            mem0.vector_store.reset()
+            return {"message": "Collection reset successfully"}
+        except Exception as e:
+            logger.error("reset_collection failed: %s", e)
+            raise HTTPException(status_code=500, detail=str(e))
+
     return router

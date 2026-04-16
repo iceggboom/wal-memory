@@ -239,6 +239,11 @@ class TencentVectorStore(VectorStoreBase):
         else:
             from tcvectordb import RPCVectorDBClient
 
+            logger.info(
+                "连接向量 DB: url=%s, database=%s, collection=%s, timeout=%ds",
+                self.config.url, self.config.database_name,
+                self.collection_name, self.config.timeout,
+            )
             self.client = RPCVectorDBClient(
                 url=self.config.url,
                 username=self.config.username,
@@ -250,12 +255,14 @@ class TencentVectorStore(VectorStoreBase):
             # 获取数据库对象
             self.db = self.client.database(self.config.database_name)
             self._store = None
+            logger.info("向量 DB 连接成功，开始创建 Collection")
             # 自动创建 Collection（如果不存在）
             self.create_col(
                 name=self.collection_name,
                 vector_size=self.embedding_model_dims,
                 distance="cosine",
             )
+            logger.info("Collection '%s' 就绪", self.collection_name)
 
     @property
     def _is_mock(self) -> bool:
@@ -286,12 +293,15 @@ class TencentVectorStore(VectorStoreBase):
             return
 
         from tcvectordb.model.collection import Embedding
-        from tcvectordb.model.enum import FieldType, IndexType
+        from tcvectordb.model.enum import FieldType, IndexType, MetricType
         from tcvectordb.model.index import FilterIndex, Index, VectorIndex, HNSWParams
 
-        metric_type = {"cosine": "COSINE", "l2": "L2", "ip": "IP"}.get(
-            distance, "COSINE"
-        )
+        metric_type_map = {
+            "cosine": MetricType.COSINE,
+            "l2": MetricType.L2,
+            "ip": MetricType.IP,
+        }
+        metric_type = metric_type_map.get(distance, MetricType.COSINE)
 
         ebd = Embedding(
             vector_field="vector",
@@ -301,6 +311,14 @@ class TencentVectorStore(VectorStoreBase):
 
         index = Index(
             FilterIndex(name="id", field_type=FieldType.String, index_type=IndexType.PRIMARY_KEY),
+            # mem0 用于过滤的字段
+            FilterIndex(name="user_id", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="agent_id", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="run_id", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="hash", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="memory_layer", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="scope", field_type=FieldType.String, index_type=IndexType.FILTER),
+            FilterIndex(name="app_id", field_type=FieldType.String, index_type=IndexType.FILTER),
             VectorIndex(
                 name="vector",
                 dimension=vector_size,
@@ -366,9 +384,9 @@ class TencentVectorStore(VectorStoreBase):
         result: Filter | None = None
         for key, value in filters.items():
             if isinstance(value, list):
-                cond = Filter.Include(key, value)
+                cond = Filter.In(key, value)
             else:
-                cond = Filter.Include(key, [str(value)])
+                cond = Filter.In(key, [str(value)])
 
             if result is None:
                 result = Filter(cond)
@@ -405,25 +423,26 @@ class TencentVectorStore(VectorStoreBase):
         )
 
         output = []
-        for doc_list in result.get("documents", []):
+        # search_by_text 返回 List[List[Dict]]，每个子列表对应一个查询的结果
+        for doc_list in result:
             for doc in doc_list:
                 payload = {}
-                doc_text = getattr(doc, "text", None) or ""
+                doc_text = doc.get("text", "") or ""
                 if doc_text:
                     payload["data"] = doc_text
                 # 提取其他字段作为 metadata
                 for field in ["user_id", "agent_id", "run_id", "actor_id", "role",
                               "hash", "memory_layer", "scope", "app_id",
                               "created_at", "updated_at"]:
-                    val = getattr(doc, field, None) or (getattr(doc, "_data", {}).get(field))
+                    val = doc.get(field)
                     if val:
                         payload[field] = val
 
                 output.append(
                     OutputData(
-                        id=getattr(doc, "id", ""),
+                        id=doc.get("id", ""),
                         payload=payload,
-                        score=getattr(doc, "score", 0.0),
+                        score=doc.get("score", 0.0),
                     )
                 )
 
@@ -484,18 +503,26 @@ class TencentVectorStore(VectorStoreBase):
             return None
 
         doc = docs[0]
-        payload = getattr(doc, "metadata", None) or {}
-        if not isinstance(payload, dict):
-            payload = {}
+        if isinstance(doc, dict):
+            payload = doc.get("metadata", {}) or {}
+            doc_id = doc.get("id", "")
+            doc_text = doc.get("text", "")
+            doc_score = doc.get("score", 1.0)
+        else:
+            payload = getattr(doc, "metadata", None) or {}
+            if not isinstance(payload, dict):
+                payload = {}
+            doc_id = doc.id
+            doc_text = getattr(doc, "text", None)
+            doc_score = getattr(doc, "score", 1.0)
 
-        doc_text = getattr(doc, "text", None)
         if doc_text and "data" not in payload:
             payload["data"] = doc_text
 
         return OutputData(
-            id=doc.id,
+            id=doc_id,
             payload=payload,
-            score=getattr(doc, "score", 1.0),
+            score=doc_score,
         )
 
     def list(
@@ -518,19 +545,27 @@ class TencentVectorStore(VectorStoreBase):
 
         results = []
         for doc in docs:
-            payload = getattr(doc, "metadata", None) or {}
-            if not isinstance(payload, dict):
-                payload = {}
+            if isinstance(doc, dict):
+                payload = doc.get("metadata", {}) or {}
+                doc_id = doc.get("id", "")
+                doc_text = doc.get("text", "")
+                doc_score = doc.get("score", 1.0)
+            else:
+                payload = getattr(doc, "metadata", None) or {}
+                if not isinstance(payload, dict):
+                    payload = {}
+                doc_id = doc.id
+                doc_text = getattr(doc, "text", None)
+                doc_score = getattr(doc, "score", 1.0)
 
-            doc_text = getattr(doc, "text", None)
             if doc_text and "data" not in payload:
                 payload["data"] = doc_text
 
             results.append(
                 OutputData(
-                    id=doc.id,
+                    id=doc_id,
                     payload=payload,
-                    score=getattr(doc, "score", 1.0),
+                    score=doc_score,
                 )
             )
 
@@ -541,8 +576,7 @@ class TencentVectorStore(VectorStoreBase):
         if self._is_mock:
             return self._store.delete_col()
 
-        collection = self.db.collection(self.collection_name)
-        collection.drop()
+        self.db.drop_collection(name=self.collection_name)
 
     def col_info(self) -> dict[str, Any]:
         """获取 Collection 信息。"""
