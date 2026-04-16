@@ -1,0 +1,47 @@
+# AI Memory Platform 配置模板
+# 复制为 config.yaml 并填入实际值
+
+# API 认证（app_id: api_key 映射）
+api_keys:
+  test-app: "your-api-key-here"
+
+# LLM 配置（Walmart 内部 LLM 网关，用于记忆提取/去重/层级分类）
+llm:
+  provider: "wal"
+  model: "DeepSeekV3.1"
+  wal_base_url: "https://your-llm-gateway-url/chat/completions"
+  aloha_app_name: "your-app-name"
+  access_token: "your-access-token"
+
+# 向量存储配置（腾讯云 VectorDB）
+vector_store:
+  provider: "tencent_vector"
+  config:
+    url: "http://your-tcvdb-endpoint:80"
+    username: "root"
+    key: "your-tcvdb-api-key"
+    collection_name: "memory"
+    embedding_model_dims: 768
+    database_name: "ai_platform"
+    timeout: 30
+    embedding_model: "bge-base-zh"  # VectorDB 内置 Embedding 模型
+    mock: false  # 开发测试设为 true 可跳过真实向量数据库
+
+# Embedder 配置（向量存储使用 VectorDB 内置 Embedding，此处为 mem0 占位）
+embedder:
+  provider: "mock"
+  model: "mock-embedding"
+  api_key: ""
+  base_url: ""
+
+# MySQL 配置（可选，不配置时降级运行）
+mysql:
+  host: "127.0.0.1"
+  port: 3306
+  database: "memory_platform"
+  username: "root"
+  password: ""
+  pool_size: 5
+
+# 降级开关（记忆服务异常时返回空结果，不阻塞主流程）
+degradation_enabled: true
