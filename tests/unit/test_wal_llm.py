@@ -149,7 +149,7 @@ class TestWalLLMGenerateResponse:
         call_args = mock_client.post.call_args
         body = call_args.kwargs.get("json", {})
         assert body["temperature"] == 0.5
-        assert "model" not in body  # model 仅在 header 中传递
+        assert body["model"] == "DeepSeekV3.2"
 
     @patch("mem0.llms.wal.httpx.Client")
     def test_request_body_always_has_temperature(self, mock_client_cls):

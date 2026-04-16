@@ -91,6 +91,7 @@ class WalLLM(LLMBase):
         """
         body: Dict = {
             "messages": messages,
+            "model": self.config.model,
             "temperature": self.config.temperature,
         }
 
