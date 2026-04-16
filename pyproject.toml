@@ -42,6 +42,9 @@ packages = ["src/memory_platform", "src/mem0"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: marks tests that require real external services (MySQL, etc.)",
+]
 
 [tool.ruff]
 target-version = "py312"

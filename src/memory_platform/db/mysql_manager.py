@@ -34,10 +34,25 @@ class MySQLManager:
                         updated_at   DATETIME,
                         is_deleted   TINYINT DEFAULT 0,
                         actor_id     VARCHAR(255),
-                        role         VARCHAR(64)
+                        role         VARCHAR(64),
+                        user_id      VARCHAR(255)
                     )
                     """
                 )
+                # 兼容旧表：如果缺少 user_id 列则自动添加
+                cursor.execute(
+                    """
+                    SELECT COUNT(*) AS cnt FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                      AND TABLE_NAME = 'history'
+                      AND COLUMN_NAME = 'user_id'
+                    """
+                )
+                row = cursor.fetchone()
+                if row and row["cnt"] == 0:
+                    cursor.execute(
+                        "ALTER TABLE history ADD COLUMN user_id VARCHAR(255) AFTER role"
+                    )
         finally:
             self.db.return_connection(conn)
 
@@ -53,6 +68,7 @@ class MySQLManager:
         is_deleted: int = 0,
         actor_id: str | None = None,
         role: str | None = None,
+        user_id: str | None = None,
     ) -> None:
         conn = self.db.get_connection()
         try:
@@ -61,9 +77,9 @@ class MySQLManager:
                     """
                     INSERT INTO history (
                         id, memory_id, old_memory, new_memory, event,
-                        created_at, updated_at, is_deleted, actor_id, role
+                        created_at, updated_at, is_deleted, actor_id, role, user_id
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         str(uuid.uuid4()),
@@ -76,6 +92,7 @@ class MySQLManager:
                         is_deleted,
                         actor_id,
                         role,
+                        user_id,
                     ),
                 )
         except Exception as e:
@@ -91,7 +108,7 @@ class MySQLManager:
                 cursor.execute(
                     """
                     SELECT id, memory_id, old_memory, new_memory, event,
-                           created_at, updated_at, is_deleted, actor_id, role
+                           created_at, updated_at, is_deleted, actor_id, role, user_id
                     FROM history
                     WHERE memory_id = %s
                     ORDER BY created_at ASC, updated_at ASC
@@ -114,6 +131,7 @@ class MySQLManager:
                 "is_deleted": bool(r["is_deleted"]),
                 "actor_id": r["actor_id"],
                 "role": r["role"],
+                "user_id": r.get("user_id"),
             }
             for r in rows
         ]

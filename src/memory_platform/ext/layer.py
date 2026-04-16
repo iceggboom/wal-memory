@@ -23,7 +23,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from anthropic import Anthropic
+    from mem0.llms.base import LLMBase
 
 logger = logging.getLogger(__name__)
 
@@ -166,8 +166,7 @@ def _has_l1_keywords(text: str) -> bool:
 
 def classify_layer_with_llm(
     text: str,
-    llm_client: "Anthropic",
-    model: str = "glm-5-turbo",
+    llm: "LLMBase",
     use_keyword_first: bool = True,
     explicit_layer: str | None = None,
 ) -> MemoryLayer:
@@ -181,8 +180,7 @@ def classify_layer_with_llm(
 
     Args:
         text: 记忆文本内容
-        llm_client: Anthropic SDK 客户端实例
-        model: LLM 模型名称
+        llm: mem0 LLM 实例（LLMBase 子类）
         use_keyword_first: 是否优先使用关键词匹配
         explicit_layer: 显式指定的层级
 
@@ -190,9 +188,9 @@ def classify_layer_with_llm(
         MemoryLayer 枚举值
 
     Example:
-        >>> from anthropic import Anthropic
-        >>> client = Anthropic(api_key="...", base_url="...")
-        >>> classify_layer_with_llm("张三是工程师", client)
+        >>> from mem0.utils.factory import LlmFactory
+        >>> llm = LlmFactory.create("wal", config={...})
+        >>> classify_layer_with_llm("张三是工程师", llm)
         <MemoryLayer.L1: 'L1'>
     """
     # 显式指定优先
@@ -208,9 +206,7 @@ def classify_layer_with_llm(
 
     # 调用 LLM 分类
     try:
-        response = llm_client.messages.create(
-            model=model,
-            max_tokens=100,
+        response = llm.generate_response(
             messages=[
                 {
                     "role": "user",
@@ -219,8 +215,8 @@ def classify_layer_with_llm(
             ],
         )
 
-        # 解析 LLM 返回
-        content = response.content[0].text.strip()
+        # generate_response 返回字符串内容
+        content = response.strip()
         result = json.loads(content)
         layer_str = result.get("layer", "L1")
 

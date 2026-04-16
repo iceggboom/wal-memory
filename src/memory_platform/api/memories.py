@@ -42,7 +42,7 @@ from memory_platform.services.write import WriteService, AddMemoryItem
 from memory_platform.services.recall import RecallService
 
 if TYPE_CHECKING:
-    from anthropic import Anthropic
+    from mem0.llms.base import LLMBase
     from memory_platform.services.cross_collection import CrossCollectionSearcher
 
 logger = logging.getLogger(__name__)
@@ -112,14 +112,14 @@ class SearchRequest(BaseModel):
 
 def create_router(
     mem0: Memory,
-    llm_client: Anthropic | None = None,
+    llm: LLMBase | None = None,
     cross_collection_searcher: CrossCollectionSearcher | None = None,
     all_app_ids: list[str] | None = None,
     app_registry: Any = None,
 ) -> APIRouter:
     """创建记忆 API 路由"""
     router = APIRouter(prefix="/v1")
-    write_svc = WriteService(mem0=mem0, llm_client=llm_client)
+    write_svc = WriteService(mem0=mem0, llm=llm)
     recall_svc = RecallService(mem0=mem0, cross_collection_searcher=cross_collection_searcher)
 
     def _auth(request: Request) -> None:

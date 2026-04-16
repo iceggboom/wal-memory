@@ -55,119 +55,106 @@ class TestParseLayerFilter:
 class TestClassifyLayerWithLLM:
     """LLM 辅助层级分类测试"""
 
+    def _mock_llm(self, content: str):
+        """构建 mock LLM 实例，generate_response 返回指定内容"""
+        from mem0.llms.base import LLMBase
+        llm = MagicMock(spec=LLMBase)
+        llm.generate_response.return_value = content
+        return llm
+
     def test_llm_classifies_l1_profile(self):
         """LLM 正确识别 L1 Profile 类型"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L1", "reason": "描述了职业身份"}')]
-        )
+        llm = self._mock_llm('{"layer": "L1", "reason": "描述了职业身份"}')
 
         result = classify_layer_with_llm(
             text="张三在腾讯担任高级工程师",
-            llm_client=mock_client,
-            use_keyword_first=False,  # 禁用关键词优先，直接使用 LLM
+            llm=llm,
+            use_keyword_first=False,
         )
 
         assert result == MemoryLayer.L1
-        mock_client.messages.create.assert_called_once()
+        llm.generate_response.assert_called_once()
 
     def test_llm_classifies_l2_preference(self):
         """LLM 正确识别 L2 Preference 类型"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L2", "reason": "描述了偏好"}')]
-        )
+        llm = self._mock_llm('{"layer": "L2", "reason": "描述了偏好"}')
 
         result = classify_layer_with_llm(
             text="倾向于使用简洁的代码风格",
-            llm_client=mock_client,
+            llm=llm,
         )
 
         assert result == MemoryLayer.L2
 
     def test_llm_classifies_l3_episodic(self):
         """LLM 正确识别 L3 Episodic 类型"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L3", "reason": "描述了具体事件"}')]
-        )
+        llm = self._mock_llm('{"layer": "L3", "reason": "描述了具体事件"}')
 
         result = classify_layer_with_llm(
             text="上周五参加了团队的技术分享会",
-            llm_client=mock_client,
+            llm=llm,
         )
 
         assert result == MemoryLayer.L3
 
     def test_llm_classifies_l4_relational(self):
         """LLM 正确识别 L4 Relational 类型"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L4", "reason": "描述了团队关系"}')]
-        )
+        llm = self._mock_llm('{"layer": "L4", "reason": "描述了团队关系"}')
 
         result = classify_layer_with_llm(
             text="小李和我在同一个项目组",
-            llm_client=mock_client,
+            llm=llm,
         )
 
         assert result == MemoryLayer.L4
 
     def test_llm_returns_default_on_parse_error(self):
         """LLM 返回格式错误时返回默认 L1"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='invalid json')]
-        )
+        llm = self._mock_llm("invalid json")
 
         result = classify_layer_with_llm(
             text="一些文本",
-            llm_client=mock_client,
+            llm=llm,
         )
 
         assert result == MemoryLayer.L1
 
     def test_llm_returns_default_on_api_error(self):
         """LLM API 调用失败时返回默认 L1"""
-        mock_client = MagicMock()
-        mock_client.messages.create.side_effect = Exception("API Error")
+        from mem0.llms.base import LLMBase
+        llm = MagicMock(spec=LLMBase)
+        llm.generate_response.side_effect = Exception("API Error")
 
         result = classify_layer_with_llm(
             text="一些文本",
-            llm_client=mock_client,
+            llm=llm,
         )
 
         assert result == MemoryLayer.L1
 
     def test_hybrid_classification_keyword_first(self):
         """混合分类：关键词优先，不调用 LLM"""
-        mock_client = MagicMock()
+        from mem0.llms.base import LLMBase
+        llm = MagicMock(spec=LLMBase)
 
-        # 关键词能匹配的情况
         result = classify_layer_with_llm(
-            text="我是Python工程师",  # "是" 和 "工程师" 匹配 L1
-            llm_client=mock_client,
+            text="我是Python工程师",
+            llm=llm,
             use_keyword_first=True,
         )
 
         assert result == MemoryLayer.L1
-        # 关键词匹配成功，不应调用 LLM
-        mock_client.messages.create.assert_not_called()
+        llm.generate_response.assert_not_called()
 
     def test_hybrid_classification_llm_fallback(self):
         """混合分类：关键词未匹配时调用 LLM"""
-        mock_client = MagicMock()
-        mock_client.messages.create.return_value = MagicMock(
-            content=[MagicMock(text='{"layer": "L2", "reason": "描述风格偏好"}')]
-        )
+        llm = self._mock_llm('{"layer": "L2", "reason": "描述风格偏好"}')
 
-        # 关键词无法匹配的情况（不包含任何层级关键词）
         result = classify_layer_with_llm(
-            text="这个人的代码非常有特色",  # 无明确关键词
-            llm_client=mock_client,
+            text="这个人的代码非常有特色",
+            llm=llm,
             use_keyword_first=True,
         )
 
         assert result == MemoryLayer.L2
-        # 关键词未匹配，应调用 LLM
-        mock_client.messages.create.assert_called_once()
+        llm.generate_response.assert_called_once()
