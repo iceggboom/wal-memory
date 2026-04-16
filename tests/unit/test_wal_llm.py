@@ -149,11 +149,11 @@ class TestWalLLMGenerateResponse:
         call_args = mock_client.post.call_args
         body = call_args.kwargs.get("json", {})
         assert body["temperature"] == 0.5
-        assert body["model"] == "DeepSeekV3.2"
+        assert "model" not in body  # model 仅在 header 中传递
 
     @patch("mem0.llms.wal.httpx.Client")
-    def test_request_body_omits_invalid_temperature(self, mock_client_cls):
-        """temperature 超出 (0, 1) 范围时不发送"""
+    def test_request_body_always_has_temperature(self, mock_client_cls):
+        """temperature 始终包含在请求体中"""
         mock_client = MagicMock()
         mock_client_cls.return_value.__enter__ = MagicMock(return_value=mock_client)
         mock_client_cls.return_value.__exit__ = MagicMock(return_value=False)
@@ -161,13 +161,14 @@ class TestWalLLMGenerateResponse:
             json_data={"choices": [{"message": {"content": "ok"}}]}
         )
 
-        config = _make_config(temperature=1.5)
-        llm = WalLLM(config)
+        # 使用默认 temperature
+        llm = WalLLM(_make_config())
         llm.generate_response(messages=[{"role": "user", "content": "test"}])
 
         call_args = mock_client.post.call_args
         body = call_args.kwargs.get("json", {})
-        assert "temperature" not in body
+        assert "temperature" in body
+        assert body["temperature"] == 0.95
 
     @patch("mem0.llms.wal.httpx.Client")
     def test_request_body_with_system_message(self, mock_client_cls):

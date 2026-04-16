@@ -89,15 +89,10 @@ class WalLLM(LLMBase):
         返回:
             请求体字典
         """
-        body = {
+        body: Dict = {
             "messages": messages,
-            "model": self.config.model,
+            "temperature": self.config.temperature,
         }
-
-        # temperature 校验：仅 0 < temp < 1 时发送
-        temperature = self.config.temperature
-        if temperature is not None and 0 < temperature < 1:
-            body["temperature"] = temperature
 
         return body
 

@@ -23,7 +23,7 @@ class WalConfig(BaseLlmConfig):
         self,
         # 基础参数
         model: Optional[str] = None,
-        temperature: float = 0.1,
+        temperature: float = 0.95,
         api_key: Optional[str] = None,
         max_tokens: int = 2000,
         top_p: float = 0.1,
